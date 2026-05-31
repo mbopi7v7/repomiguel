@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Eventos desde API</title>
+
+  <link rel="stylesheet" href="/assets/bootstrap/css/bootstrap.min.css">
+</head>
+<body>
+
+<div class="container mt-4">
+
+  <h1>Eventos disponibles</h1>
+
+  <p>
+    Esta página descarga eventos desde el backend PHP,
+    los guarda en LocalStorage y luego los muestra en una tabla.
+  </p>
+
+  <button id="btnDescargar" class="btn btn-primary mb-3">
+    Descargar eventos
+  </button>
+
+  <button id="btnPintar" class="btn btn-outline-secondary mb-3">
+    Pintar desde LocalStorage
+  </button>
+
+  <button id="btnLimpiar" class="btn btn-outline-danger mb-3">
+    Limpiar LocalStorage
+  </button>
+
+  <div id="mensaje" class="mb-3"></div>
+
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Título</th>
+        <th>Lugar</th>
+        <th>Fecha</th>
+        <th>Hora</th>
+        <th>Activo</th>
+      </tr>
+    </thead>
+
+    <tbody id="tbodyEventos">
+    </tbody>
+  </table>
+
+</div>
+
+<script src="eventos.js"></script>
+</body>
+</html>
