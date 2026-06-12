@@ -1,0 +1,2151 @@
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\eventos\actualizar.php =====
+<?php
+include "../lib/conex.php"; // incluimos clase de conexion
+include "../lib/Evento.php";
+$db = new Conex(); //creamos la conexion (instanciamos)
+$con = $db->conectar(); // conectamos a la db
+//$sql="select * from eventos"; // creamos una consulta 
+//$rs=$con->query($sql); // ejecutamos la consulta
+$evento = new Evento($con);
+
+// $_REQUEST $_GET $_POST
+if (isset($_POST)) {
+    //print_r($_POST);
+    // Validaciones
+    if (empty($_POST['titulo']) || strlen($_POST['titulo']) > 100) {
+        $errores[] = "El título es obligatorio y no debe superar 100 caracteres.";
+    }
+
+    if (empty($_POST['fecha'])) {
+        $errores[] = "La fecha es obligatoria.";
+    } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $_POST['fecha'])) {
+        $errores[] = "La fecha debe tener formato YYYY-MM-DD.";
+    }
+
+    if (!empty($_POST['hora']) && !preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $_POST['hora'])) {
+        $errores[] = "La hora debe tener formato HH:MM o HH:MM:SS.";
+    }
+
+    if (!empty($_POST['lugar']) && strlen($_POST['lugar']) > 191) {
+        $errores[] = "El lugar no debe superar 191 caracteres.";
+    }
+
+    if (!in_array($_POST['activo'], [0, 1])) {
+        $errores[] = "El campo activo debe ser 0 o 1.";
+    }
+    // Si hay errores, mostrarlos
+    if (empty($errores)) {
+        /* foreach ($errores as $error) {
+            echo "<p style='color:red;'>$error</p>";
+        } */
+        $rs = $evento->update($_POST);
+        header("Location: index.php?ok=2");
+    } else {
+        header("Location: editar.php?id=" . $_POST['id'] . "&error=2");
+    }
+
+
+    exit();
+} else {
+    echo "No llegaron valores por POST";
+}
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\eventos\api.php =====
+<?php
+header('Content-Type: application/json');
+include "../lib/conex.php"; // incluimos clase de conexion
+include "../lib/Evento.php";
+include "../lib/Inscripciones.php";
+$db=new Conex(); //creamos la conexion (instanciamos)
+$con=$db->conectar(); // conectamos a la db
+//$sql="select * from eventos"; // creamos una consulta 
+//$rs=$con->query($sql); // ejecutamos la consulta
+$evento= new Evento($con);
+$inscripcion= new Inscripciones($con);
+// getById id= $_GET['id']
+if (isset($_GET['id']) && !empty($_GET['id'])) {
+    $id = $_GET['id'];
+    $rs = $evento->getById($id);
+} else { // getAll
+    $rs = $evento->getALL();
+}
+if (isset($_GET['inscripcion']) && ($_GET['inscripcion']==1)) 
+    {
+    $conInscripcion=true;
+    } else { 
+    $conInscripcion=false;
+    }
+
+$datos=[];
+while ($fila= $rs->fetch_assoc()) //loop while que se ejecuta mientras haya
+{
+    if ($conInscripcion) {
+        $rsIns=$inscripcion->getByEventoID($fila['id']);
+        $lista=[];
+        while ($filaIns= $rsIns->fetch_assoc()) {
+            $lista[]=$filaIns;
+            }
+        $fila['inscriptos']=$lista;
+        $fila['total_inscriptos']=count($lista);
+    }
+    $datos[]=$fila;
+}
+$respuesta=[
+    "status"=>"success",
+    "data"=>$datos,
+    "total"=>count($datos)
+];
+
+echo json_encode($respuesta);
+?>
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\eventos\borrar.php =====
+<?php
+include "../lib/conex.php"; // incluimos clase de conexion
+include "../lib/Evento.php";
+$db = new Conex(); //creamos la conexion (instanciamos)
+$con = $db->conectar(); // conectamos a la db
+//$sql="select * from eventos"; // creamos una consulta 
+//$rs=$con->query($sql); // ejecutamos la consulta
+$evento = new Evento($con);
+if (isset($_GET['id'])) {
+     if($rs = $evento->delete($_GET['id'])) 
+        { ;
+        header("Location: index.php?ok=3");
+        exit(); 
+        } else {
+            header("Location: index.php?error=3");
+            exit();
+        }
+} else {
+    echo "No se recibió un ID válido para eliminar.";
+    header("Location: index.php?error=3");
+    exit();
+}
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\eventos\editar.php =====
+//$fila= $rs->fetch_assoc()
+<?php
+include "../lib/conex.php"; // incluimos clase de conexion
+include "../lib/Evento.php";
+$db=new Conex(); //creamos la conexion (instanciamos)
+$con=$db->conectar(); // conectamos a la db
+//$sql="select * from eventos"; // creamos una consulta 
+//$rs=$con->query($sql); // ejecutamos la consulta
+$evento= new Evento($con);
+if (isset($_GET['id']))
+     {
+    $rs=$evento->getByID($_GET['id']);
+    $fila= $rs->fetch_assoc();
+     }   
+$target="actualizar.php";
+$titulo_form="Editar Evento";   
+?>
+<?php include_once '../partials/template_start.php';
+
+include "_form.php";
+include_once '../partials/template_end.php';
+ ?>
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\eventos\guardar.php =====
+<?php
+include "../lib/conex.php"; // incluimos clase de conexion
+include "../lib/Evento.php";
+$db=new Conex(); //creamos la conexion (instanciamos)
+$con=$db->conectar(); // conectamos a la db
+//$sql="select * from eventos"; // creamos una consulta 
+//$rs=$con->query($sql); // ejecutamos la consulta
+$evento= new Evento($con);
+$errores = [];
+// $_REQUEST $_GET $_POST
+ if(isset($_POST)) {
+    //print_r($_POST);
+   // Validaciones
+    if (empty($_POST['titulo']) || strlen($_POST['titulo']) > 100) {
+        $errores[] = "El título es obligatorio y no debe superar 100 caracteres.";
+    }
+
+    if (empty($_POST['fecha'])) {
+        $errores[] = "La fecha es obligatoria.";
+    } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $_POST['fecha'])) {
+        $errores[] = "La fecha debe tener formato YYYY-MM-DD.";
+    }
+
+    if (!empty($_POST['hora']) && !preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $_POST['hora'])) {
+        $errores[] = "La hora debe tener formato HH:MM o HH:MM:SS.";
+    }
+
+    if (!empty($_POST['lugar']) && strlen($_POST['lugar']) > 191) {
+        $errores[] = "El lugar no debe superar 191 caracteres.";
+    }
+
+    if (!in_array($_POST['activo'], [0,1])) {
+        $errores[] = "El campo activo debe ser 0 o 1.";
+    }
+    // Si hay errores, mostrarlos
+    if (empty($errores)) {
+
+            $rs=$evento->insert($_POST);
+        header("Location: index.php?ok=1");
+    } else {
+        //header("Location: nuevo.php?error=1");
+        print_r($errores);
+    }
+    }
+
+
+?>
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\eventos\index.php =====
+<?php
+include "../lib/conex.php"; // incluimos clase de conexion
+include "../lib/Evento.php";
+$db=new Conex(); //creamos la conexion (instanciamos)
+$con=$db->conectar(); // conectamos a la db
+//$sql="select * from eventos"; // creamos una consulta 
+//$rs=$con->query($sql); // ejecutamos la consulta
+$evento= new Evento($con);
+$rs=$evento->getALL();
+?>
+<?php include_once '../partials/template_start.php'; ?>
+             
+<h3>   
+<?php 
+//echo "Bienvenidos ".$nombre."!!! ".$valor;
+?>    
+</h3>
+  <?php 
+  if (isset($_GET['ok']) && $_GET['ok'] == 1) {
+      echo "<p style='color:green;'>Evento insertado correctamente.</p>";
+  }
+  ?>
+  <?php 
+  if (isset($_GET['ok']) && $_GET['ok'] == 2) {
+      echo "<p style='color:green;'>Evento actualizado correctamente.</p>";
+  }
+  ?>
+    <?php 
+  if (isset($_GET['ok']) && $_GET['ok'] == 3) {
+      echo "<p style='color:green;'>Evento eliminado correctamente.</p>";
+  }
+  ?>
+  <?php 
+  if (isset($_GET['error']) && $_GET['error'] == 3) {
+      echo "<p style='color:red;'>Error al eliminar el evento.</p>";
+  }
+  ?>
+<table class="table table-striped ">
+<tr>
+    <th>id</th>
+    <th>titulo</th>
+    <th>lugar</th>
+    <th>fecha</th>
+    <th>hora</th>
+    <th>Activo</th>
+    <th colspan="2"><a href="nuevo.php" class="btn btn-outline-primary">Nuevo</a></th>
+    <th colspan="2"><a href="api.php" class="btn btn-outline-info">JSON</a></th>
+</tr>
+</tr>
+
+<?php 
+while ($fila= $rs->fetch_assoc()) //loop while que se ejecuta mientras haya fila en el array asociativo
+    { ?>
+       
+<tr>
+    <td> <?php echo $fila["id"]; ?></td>
+    <td> <?php echo $fila["titulo"]; ?></td>
+    <td> <?php echo $fila["lugar"]; ?></td>
+    <td> <?php echo $fila["hora"]; ?></td>
+    <td> <?php echo $fila["fecha"]; ?></td>
+    <td> <?php if($fila["activo"]) { echo "Si"; } else { echo "NO";} ?></td>
+    <td ><a href="editar.php?id=<?php echo $fila["id"]; ?>" class="btn btn-outline-warning">Editar</a></td>
+    <td ><a href="borrar.php?id=<?php echo $fila["id"]; ?>" class="btn btn-outline-danger">Borrar</a></td>
+    <td><a href="api.php?id=<?php echo $fila["id"]; ?>" class="btn btn-outline-info" target="_blank">JSON</a></td>
+<td ><a href="../inscriptos/index.php?id=<?php echo $fila["id"]; ?>" class="btn btn-outline-secondary">Inscriptos</a></td>
+</tr>
+
+<?php     }
+?>
+
+</table>
+
+<?php include_once '../partials/template_end.php'; ?>  
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\eventos\nuevo.php =====
+<?php
+$target="guardar.php";
+$titulo_form="Registrar Evento";   
+
+$fila = [
+    "id" => "",
+    "titulo" => "",
+    "fecha" => "",
+    "hora" => "",
+    "lugar" => "",
+    "activo" => 1
+];
+
+include_once '../partials/template_start.php'; 
+include "_form.php";
+include_once '../partials/template_end.php';
+
+?>
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\eventos\_form.php =====
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Formulario de Eventos</title>
+</head>
+<body>
+
+  <h2><?php echo $titulo_form; ?></h2>
+<?php 
+  if (isset($_GET['error']) && $_GET['error'] == 1) {
+      echo "<p style='color:red;'>Error al insertar datos del evento.</p>";
+  }
+  $target="guardar.php";
+  ?>
+  <?php 
+  if (isset($_GET['error']) && $_GET['error'] == 1) {
+      echo "<p style='color:red;'>Error al actualizar el evento.</p>";
+  }
+  ?>
+
+  <form action="<?php echo $target; ?>" method="post">
+    <!-- Campo oculto para id (AUTO_INCREMENT, no se carga manualmente) -->
+    <input type="hidden" name="id" value="<?php echo $fila["id"]; ?>">
+    
+    <label for="titulo">Título:</label><br>
+    <input type="text" value='<?php echo $fila["titulo"]; ?>' id="titulo" name="titulo" maxlength="100" required class="form-control" ><br><br>
+    
+    <label for="fecha">Fecha:</label><br> 
+    <input type="date" value='<?php echo $fila["fecha"]; ?>' id="fecha" name="fecha" required class="form-control" ><br><br>
+    
+    <label for="hora">Hora:</label><br>
+    <input type="time"  value='<?php echo $fila["hora"]; ?>' id="hora" name="hora" class="form-control"><br><br>
+    
+    <label for="lugar">Lugar:</label><br>
+    <input type="text"  value='<?php echo $fila["lugar"]; ?>' id="lugar" name="lugar" maxlength="191" class="form-control"><br><br>
+    
+    <label for="activo">Activo:</label><br>
+    <select id="activo" name="activo" required class="form-control">
+      <option value="1" <?php echo ($fila["activo"] == 1) ? "selected" : ""; ?>>Sí</option>
+      <option value="0" <?php echo ($fila["activo"] == 0) ? "selected" : ""; ?>>No</option>
+    </select><br><br>
+    <a href="index.php" class="btn btn-outline-secondary">Volver al listado</a>
+    <input type="submit" value="Guardar" class="btn btn-outline-success">
+  </form>
+</body>
+</html>
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\front\eventos\api.js =====
+console.log("cargo el api.js");
+ 
+function cargarDatos()
+{
+console.log('DesCargando datos del BACKEND desde cargarDatos');
+fetch('http://localhost:8080/0521/eventos/api.php')
+    .then(response => response.json())
+    .then(data => {
+        console.log(data);
+        localStorage.setItem('eventos', JSON.stringify(data.data));
+        localStorage.setItem('eventos_count', JSON.stringify(data.total));
+    });
+}
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\front\eventos\app.js =====
+console.log("app.js cargado correctamente");
+
+// Referencias generales
+const mensaje = document.getElementById("mensaje");
+
+// Vistas
+const vistaListado = document.getElementById("vistaListado");
+const vistaFormulario = document.getElementById("vistaFormulario");
+
+// Botones del listado
+const btnDescargar = document.getElementById("btnDescargar");
+const btnPintar = document.getElementById("btnPintar");
+const btnLimpiarStorage = document.getElementById("btnLimpiarStorage");
+
+// Tabla
+const tbodyEventos = document.getElementById("tbodyEventos");
+
+// Formulario
+const formEvento = document.getElementById("formEvento");
+const btnCancelar = document.getElementById("btnCancelar");
+
+const inputId = document.getElementById("id");
+const inputTitulo = document.getElementById("titulo");
+const inputLugar = document.getElementById("lugar");
+const inputFecha = document.getElementById("fecha");
+const inputHora = document.getElementById("hora");
+const inputActivo = document.getElementById("activo");
+
+
+// EVENTOS PRINCIPALES
+
+btnDescargar.addEventListener("click", () => {
+  cargarDatos()
+ /*    .then(respuesta => {
+      console.log("Respuesta recibida:", respuesta);
+
+      guardarEventos(respuesta.data);
+      pintarTabla();
+      mostrarListado();
+
+      mostrarMensaje(
+        "Eventos descargados correctamente. Total: " + respuesta.total,
+        "success"
+      );
+    })
+    .catch(error => {
+      console.error("Error al descargar eventos:", error);
+
+      mostrarMensaje(
+        "No se pudieron descargar los eventos desde el backend.",
+        "danger"
+      );
+    }); */
+}) ;
+
+btnPintar.addEventListener("click", () => {
+  pintarTabla();
+  mostrarListado();
+
+  mostrarMensaje(
+    "Tabla generada usando los datos guardados en LocalStorage.",
+    "info"
+  );
+});
+
+btnLimpiarStorage.addEventListener("click", () => {
+  localStorage.removeItem("eventos");
+  tbodyEventos.innerHTML = "";
+  limpiarFormulario();
+  mostrarListado();
+
+  mostrarMensaje(
+    "LocalStorage limpiado correctamente.",
+    "warning"
+  );
+});
+
+btnCancelar.addEventListener("click", () => {
+  limpiarFormulario();
+  mostrarListado();
+
+  mostrarMensaje(
+    "Edición cancelada.",
+    "secondary"
+  );
+});
+
+formEvento.addEventListener("submit", (e) => {
+  e.preventDefault();
+  guardarCambiosLocales();
+});
+
+tbodyEventos.addEventListener("click", (e) => {
+  const boton = e.target;
+ // console.log(boton)
+ //mostrarMensaje(boton., "secondary");
+  if (boton.classList.contains("btnEditar")) {
+    const id = boton.dataset.id;
+    editarEvento(id);
+  }
+
+  if (boton.classList.contains("btnEliminar")) {
+    const id = boton.dataset.id;
+    eliminarEventoLocal(id);
+  }
+});
+
+
+// FUNCIONES DE LOCALSTORAGE
+
+function obtenerEventos() {
+  const datosTexto = localStorage.getItem("eventos");
+
+  if (datosTexto === null) {
+    return [];
+  }
+
+  return JSON.parse(datosTexto);
+}
+
+function guardarEventos(eventos) {
+  localStorage.setItem("eventos", JSON.stringify(eventos));
+}
+
+
+// FUNCIONES DE VISTAS
+
+function mostrarListado() {
+  vistaListado.style.display = "block";
+  vistaFormulario.style.display = "none";
+}
+
+function mostrarFormulario() {
+  vistaListado.style.display = "none";
+  vistaFormulario.style.display = "block";
+}
+
+
+// FUNCIONES DE INTERFAZ
+
+function pintarTabla() {
+  const eventos = obtenerEventos();
+
+  tbodyEventos.innerHTML = "";
+
+  if (eventos.length === 0) {
+    tbodyEventos.innerHTML = `
+      <tr>
+        <td colspan="7" class="text-center">
+          No hay eventos cargados en LocalStorage.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  eventos.forEach(evento => {
+    const estado = evento.activo == 1 ? "Activo" : "Inactivo";
+
+    tbodyEventos.innerHTML += `
+      <tr>
+        <td>${evento.id}</td>
+        <td>${evento.titulo}</td>
+        <td>${evento.lugar}</td>
+        <td>${evento.fecha}</td>
+        <td>${evento.hora}</td>
+        <td>${estado}</td>
+        <td>
+          <button 
+            class="btn btn-sm btn-warning btnEditar"
+            data-id="${evento.id}">
+            Editar
+          </button>
+
+          <button 
+            class="btn btn-sm btn-danger btnEliminar"
+            data-id="${evento.id}">
+            Eliminar local
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+}
+
+function mostrarMensaje(texto, tipo) {
+  mensaje.innerHTML = `
+    <div class="alert alert-${tipo}">
+      ${texto}
+    </div>
+  `;
+}
+
+function limpiarFormulario() {
+  inputId.value = "";
+  inputTitulo.value = "";
+  inputLugar.value = "";
+  inputFecha.value = "";
+  inputHora.value = "";
+  inputActivo.value = "1";
+}
+
+function cargarFormulario(evento) {
+  inputId.value = evento.id;
+  inputTitulo.value = evento.titulo;
+  inputLugar.value = evento.lugar;
+  inputFecha.value = evento.fecha;
+  inputHora.value = evento.hora;
+  inputActivo.value = evento.activo;
+}
+
+
+// FUNCIONES DE ACCIONES LOCALES
+
+function editarEvento(id) {
+  const eventos = obtenerEventos();
+
+  const evento = eventos.find(item => item.id == id);
+
+  if (!evento) {
+    mostrarMensaje(
+      "No se encontró el evento seleccionado.",
+      "danger"
+    );
+    return;
+  }
+
+  cargarFormulario(evento);
+  mostrarFormulario();
+
+  mostrarMensaje(
+    "Evento cargado en el formulario. Puede modificar los datos.",
+    "info"
+  );
+}
+
+function guardarCambiosLocales() {
+  const id = inputId.value;
+
+  if (id === "") {
+    mostrarMensaje(
+      "Primero debe seleccionar un evento para editar.",
+      "warning"
+    );
+    return;
+  }
+
+  const eventoActualizado = {
+    id: id,
+    titulo: inputTitulo.value,
+    lugar: inputLugar.value,
+    fecha: inputFecha.value,
+    hora: inputHora.value,
+    activo: inputActivo.value
+  };
+
+  let eventos = obtenerEventos();
+
+  eventos = eventos.map(item => {
+    if (item.id == eventoActualizado.id) {
+      return eventoActualizado;
+    }
+
+    return item;
+  });
+
+  guardarEventos(eventos);
+  pintarTabla();
+  limpiarFormulario();
+  mostrarListado();
+
+  mostrarMensaje(
+    "Evento actualizado localmente. La base de datos todavía no fue modificada.",
+    "success"
+  );
+}
+
+function eliminarEventoLocal(id) {
+  const confirmar = confirm(
+    "¿Desea eliminar este evento de la copia local?"
+  );
+
+  if (!confirmar) {
+    return;
+  }
+
+  let eventos = obtenerEventos();
+
+  eventos = eventos.filter(item => item.id != id);
+
+  guardarEventos(eventos);
+  pintarTabla();
+  limpiarFormulario();
+  mostrarListado();
+
+  mostrarMensaje(
+    "Evento eliminado localmente. La base de datos todavía conserva el registro.",
+    "warning"
+  );
+}
+
+
+// INICIO DE LA PANTALLA
+
+mostrarListado();
+pintarTabla();
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\front\api.js =====
+console.log("cargo el api.js");
+
+function cargarDatos()
+{
+console.log('DesCargando datos del BACKEND desde cargarDatos');
+fetch('http://localhost:8080/0521/eventos/api.php')
+    .then(response => response.json())
+    .then(data => {
+        console.log(data);
+        localStorage.setItem('eventos_data', JSON.stringify(data.data));
+        localStorage.setItem('eventos_count', JSON.stringify(data.total));
+    });
+}
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\front\app.js =====
+console.log("app.js cargado correctamente");
+
+// Referencias generales
+const mensaje = document.getElementById("mensaje");
+
+// Vistas
+const vistaListado = document.getElementById("vistaListado");
+const vistaFormulario = document.getElementById("vistaFormulario");
+
+// Botones del listado
+const btnDescargar = document.getElementById("btnDescargar");
+const btnPintar = document.getElementById("btnPintar");
+const btnLimpiarStorage = document.getElementById("btnLimpiarStorage");
+
+// Tabla
+const tbodyEventos = document.getElementById("tbodyEventos");
+
+// Formulario
+const formEvento = document.getElementById("formEvento");
+const btnCancelar = document.getElementById("btnCancelar");
+
+const inputId = document.getElementById("id");
+const inputTitulo = document.getElementById("titulo");
+const inputLugar = document.getElementById("lugar");
+const inputFecha = document.getElementById("fecha");
+const inputHora = document.getElementById("hora");
+const inputActivo = document.getElementById("activo");
+
+
+// EVENTOS PRINCIPALES
+
+btnDescargar.addEventListener("click", () => {
+  cargarDatos()
+    .then(respuesta => {
+      console.log("Respuesta recibida:", respuesta);
+
+      guardarEventos(respuesta.data);
+      pintarTabla();
+      mostrarListado();
+
+      mostrarMensaje(
+        "Eventos descargados correctamente. Total: " + respuesta.total,
+        "success"
+      );
+    })
+    .catch(error => {
+      console.error("Error al descargar eventos:", error);
+
+      mostrarMensaje(
+        "No se pudieron descargar los eventos desde el backend.",
+        "danger"
+      );
+    });
+});
+
+btnPintar.addEventListener("click", () => {
+  pintarTabla();
+  mostrarListado();
+
+  mostrarMensaje(
+    "Tabla generada usando los datos guardados en LocalStorage.",
+    "info"
+  );
+});
+
+btnLimpiarStorage.addEventListener("click", () => {
+  localStorage.removeItem("eventos");
+  tbodyEventos.innerHTML = "";
+  limpiarFormulario();
+  mostrarListado();
+
+  mostrarMensaje(
+    "LocalStorage limpiado correctamente.",
+    "warning"
+  );
+});
+
+btnCancelar.addEventListener("click", () => {
+  limpiarFormulario();
+  mostrarListado();
+
+  mostrarMensaje(
+    "Edición cancelada.",
+    "secondary"
+  );
+});
+
+formEvento.addEventListener("submit", (e) => {
+  e.preventDefault();
+  guardarCambiosLocales();
+});
+
+tbodyEventos.addEventListener("click", (e) => {
+  const boton = e.target;
+
+  if (boton.classList.contains("btnEditar")) {
+    const id = boton.dataset.id;
+    editarEvento(id);
+  }
+
+  if (boton.classList.contains("btnEliminar")) {
+    const id = boton.dataset.id;
+    eliminarEventoLocal(id);
+  }
+});
+
+
+// FUNCIONES DE LOCALSTORAGE
+
+function obtenerEventos() {
+  const datosTexto = localStorage.getItem("eventos");
+
+  if (datosTexto === null) {
+    return [];
+  }
+
+  return JSON.parse(datosTexto);
+}
+
+function guardarEventos(eventos) {
+  localStorage.setItem("eventos", JSON.stringify(eventos));
+}
+
+
+// FUNCIONES DE VISTAS
+
+function mostrarListado() {
+  vistaListado.style.display = "block";
+  vistaFormulario.style.display = "none";
+}
+
+function mostrarFormulario() {
+  vistaListado.style.display = "none";
+  vistaFormulario.style.display = "block";
+}
+
+
+// FUNCIONES DE INTERFAZ
+
+function pintarTabla() {
+  const eventos = obtenerEventos();
+
+  tbodyEventos.innerHTML = "";
+
+  if (eventos.length === 0) {
+    tbodyEventos.innerHTML = `
+      <tr>
+        <td colspan="7" class="text-center">
+          No hay eventos cargados en LocalStorage.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  eventos.forEach(evento => {
+    const estado = evento.activo == 1 ? "Activo" : "Inactivo";
+
+    tbodyEventos.innerHTML += `
+      <tr>
+        <td>${evento.id}</td>
+        <td>${evento.titulo}</td>
+        <td>${evento.lugar}</td>
+        <td>${evento.fecha}</td>
+        <td>${evento.hora}</td>
+        <td>${estado}</td>
+        <td>
+          <button 
+            class="btn btn-sm btn-warning btnEditar"
+            data-id="${evento.id}">
+            Editar
+          </button>
+
+          <button 
+            class="btn btn-sm btn-danger btnEliminar"
+            data-id="${evento.id}">
+            Eliminar local
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+}
+
+function mostrarMensaje(texto, tipo) {
+  mensaje.innerHTML = `
+    <div class="alert alert-${tipo}">
+      ${texto}
+    </div>
+  `;
+}
+
+function limpiarFormulario() {
+  inputId.value = "";
+  inputTitulo.value = "";
+  inputLugar.value = "";
+  inputFecha.value = "";
+  inputHora.value = "";
+  inputActivo.value = "1";
+}
+
+function cargarFormulario(evento) {
+  inputId.value = evento.id;
+  inputTitulo.value = evento.titulo;
+  inputLugar.value = evento.lugar;
+  inputFecha.value = evento.fecha;
+  inputHora.value = evento.hora;
+  inputActivo.value = evento.activo;
+}
+
+
+// FUNCIONES DE ACCIONES LOCALES
+
+function editarEvento(id) {
+  const eventos = obtenerEventos();
+
+  const evento = eventos.find(item => item.id == id);
+
+  if (!evento) {
+    mostrarMensaje(
+      "No se encontró el evento seleccionado.",
+      "danger"
+    );
+    return;
+  }
+
+  cargarFormulario(evento);
+  mostrarFormulario();
+
+  mostrarMensaje(
+    "Evento cargado en el formulario. Puede modificar los datos.",
+    "info"
+  );
+}
+
+function guardarCambiosLocales() {
+  const id = inputId.value;
+
+  if (id === "") {
+    mostrarMensaje(
+      "Primero debe seleccionar un evento para editar.",
+      "warning"
+    );
+    return;
+  }
+
+  const eventoActualizado = {
+    id: id,
+    titulo: inputTitulo.value,
+    lugar: inputLugar.value,
+    fecha: inputFecha.value,
+    hora: inputHora.value,
+    activo: inputActivo.value
+  };
+
+  let eventos = obtenerEventos();
+
+  eventos = eventos.map(item => {
+    if (item.id == eventoActualizado.id) {
+      return eventoActualizado;
+    }
+
+    return item;
+  });
+
+  guardarEventos(eventos);
+  pintarTabla();
+  limpiarFormulario();
+  mostrarListado();
+
+  mostrarMensaje(
+    "Evento actualizado localmente. La base de datos todavía no fue modificada.",
+    "success"
+  );
+}
+
+function eliminarEventoLocal(id) {
+  const confirmar = confirm(
+    "¿Desea eliminar este evento de la copia local?"
+  );
+
+  if (!confirmar) {
+    return;
+  }
+
+  let eventos = obtenerEventos();
+
+  eventos = eventos.filter(item => item.id != id);
+
+  guardarEventos(eventos);
+  pintarTabla();
+  limpiarFormulario();
+  mostrarListado();
+
+  mostrarMensaje(
+    "Evento eliminado localmente. La base de datos todavía conserva el registro.",
+    "warning"
+  );
+}
+
+
+// INICIO DE LA PANTALLA
+
+mostrarListado();
+pintarTabla();
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\inscriptos\actualizar.php =====
+<?php
+include "../lib/conex.php"; // incluimos clase de conexion
+include "../lib/Inscripciones.php";
+$db = new Conex(); //creamos la conexion (instanciamos)
+$con = $db->conectar(); // conectamos a la db
+//$sql="select * from eventos"; // creamos una consulta 
+//$rs=$con->query($sql); // ejecutamos la consulta
+$datos = new Inscripciones($con);
+
+// $_REQUEST $_GET $_POST
+if(isset($_POST)) {
+    //print_r($_POST);
+   /*
+    // Validaciones
+    if (empty($_POST['nombre']) || strlen($_POST['nombre']) > 100) {
+        $errores[] = "El nombre es obligatorio y no debe superar 100 caracteres.";
+    }
+        if (empty($_POST['apellido']) || strlen($_POST['apellido']) > 100) {
+        $errores[] = "El apellido es obligatorio y no debe superar 100 caracteres.";
+    }
+        if (empty($_POST['doc']) || strlen($_POST['doc']) > 191) {
+        $errores[] = "El número de documento es obligatorio y no debe superar 191 caracteres.";
+    }
+        if (empty($_POST['mail']) || strlen($_POST['mail']) > 191) {
+        $errores[] = "El correo electrónico es obligatorio y no debe superar 191 caracteres.";
+    }
+    if (empty($_POST['fenac'])) {
+        $errores[] = "La fecha es obligatoria.";
+    } 
+     if (empty($_POST['id'])) {
+        $errores[] = "La id es obligatoria.";
+    } 
+    if (!empty($_POST['direccion']) && strlen($_POST['direccion']) > 191) {
+        $errores[] = "El lugar no debe superar 191 caracteres.";
+    }
+
+
+    if (!in_array($_POST['esadmin'], [0,1])) {
+        $errores[] = "El campo administrador debe ser 0 o 1.";
+    }
+    // Si hay errores, mostrarlos * *
+*/
+        $checkin = $_POST['checkin'];
+        if ($checkin == 1) {
+            $_POST['fecha_checkin'] ="'".date("Y-m-d H:i:s")."'";
+        } else {
+            $_POST['fecha_checkin'] = "NULL";
+        }
+
+    if (empty($errores)) {
+        if($rs = $datos->update($_POST)) {
+            header("Location: index.php?ok=2&id=".$_POST['evento_id']);
+        } else {
+            header("Location: editar.php?id=" . $_POST['id'] . "&error=1");
+        }   
+    } else {
+        header("Location: editar.php?id=" . $_POST['id'] . "&error=2");     
+    }
+
+
+    exit();
+} else {
+    echo "No llegaron valores por POST";
+}
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\inscriptos\borrar.php =====
+<?php
+include "../lib/conex.php"; // incluimos clase de conexion
+include "../lib/Inscripciones.php";
+$db = new Conex(); //creamos la conexion (instanciamos)
+$con = $db->conectar(); // conectamos a la db
+//$sql="select * from eventos"; // creamos una consulta 
+//$rs=$con->query($sql); // ejecutamos la consulta
+$datos = new Inscripciones($con);
+$fila = $datos->getByID($_GET['id'])->fetch_assoc();
+//print_r($fila);
+
+if (isset($_GET['id'])) {
+     if($rs = $datos->delete($_GET['id'])) 
+        { ;
+        header("Location: index.php?ok=3&id=".$fila['evento_id']);
+        exit(); 
+        } else {
+            header("Location: index.php?error=3&id=".$fila['evento_id']);
+            exit();
+        }
+} else {
+    echo "No se recibió un ID válido para eliminar.";
+    header("Location: index.php?error=3&id=".$fila['evento_id']);
+    exit();
+}
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\inscriptos\editar.php =====
+<?php
+include "../lib/conex.php"; // incluimos clase de conexion
+include "../lib/Usuario.php";
+include "../lib/Inscripciones.php";
+include "../lib/Evento.php";
+$db = new Conex(); //creamos la conexion (instanciamos)
+
+$con = $db->conectar(); // conectamos a la db
+$eventos = new Evento($con);
+$usuarios = new Usuario($con);
+$dato = new Inscripciones($con);
+$fila=$dato->getByID($_GET['id'])->fetch_assoc(); 
+//print_r($fila);
+$ev=$eventos->getByID($fila['evento_id'])->fetch_assoc();
+$us_fila=$usuarios->getByID($fila['usuario_id'])->fetch_assoc();
+$us=$usuarios->getAll();
+$modo="edicion";
+$target="actualizar.php";
+$titulo_form="Editar Inscripción para el evento: ".$ev['titulo']; 
+
+?>
+<?php include_once '../partials/template_start.php';
+
+include "_form.php";
+include_once '../partials/template_end.php';
+ ?>
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\inscriptos\guardar.php =====
+<?php
+include "../lib/conex.php"; // incluimos clase de conexion
+include "../lib/Inscripciones.php";
+$db=new Conex(); //creamos la conexion (instanciamos)
+$con=$db->conectar(); // conectamos a la db
+//$sql="select * from eventos"; // creamos una consulta 
+//$rs=$con->query($sql); // ejecutamos la consulta
+$datos= new Inscripciones($con);
+$errores = [];
+// $_REQUEST $_GET $_POST
+ if(isset($_POST)) {
+    //print_r($_POST);
+   /*
+    // Validaciones
+    if (empty($_POST['nombre']) || strlen($_POST['nombre']) > 100) {
+        $errores[] = "El nombre es obligatorio y no debe superar 100 caracteres.";
+    }
+        if (empty($_POST['apellido']) || strlen($_POST['apellido']) > 100) {
+        $errores[] = "El apelli<do es obligatorio y no debe superar 100 caracteres.";
+    }
+        if (empty($_POST['doc']) || strlen($_POST['doc']) > 191) {
+        $errores[] = "El número de documento es obligatorio y no debe superar 191 caracteres.";
+    }
+        if (empty($_POST['mail']) || strlen($_POST['mail']) > 191) {
+        $errores[] = "El correo electrónico es obligatorio y no debe superar 191 caracteres.";
+    }
+    if (empty($_POST['fenac'])) {
+        $errores[] = "La fecha es obligatoria.";
+    } 
+
+
+
+    if (!empty($_POST['direccion']) && strlen($_POST['direccion']) > 191) {
+        $errores[] = "El lugar no debe superar 191 caracteres.";
+    }
+
+
+    if (!in_array($_POST['esadmin'], [0,1])) {
+        $errores[] = "El campo administrador debe ser 0 o 1.";
+    }
+    // Si hay errores, mostrarlos */
+     // validar si usaurio ya se inscrio al evento
+    if ($datos->checkInscripto($_POST['evento_id'], $_POST['usuario_id'])) {
+        $errores[] = "El usuario ya se encuentra inscripto en el evento.";
+    }
+     
+    if (empty($errores)) {
+
+        if ($rs=$datos->insert($_POST)) {
+            header("Location: index.php?ok=1&id=".$_POST['evento_id']);
+        } else {
+            header("Location: nuevo.php?error=1&evento_id=".$_POST['evento_id']);
+        }
+    } else {
+        header("Location: nuevo.php?error=1&evento_id=".$_POST['evento_id']);
+        //print_r($errores);
+    }
+    }
+
+
+?>
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\inscriptos\index.php =====
+<?php
+include "../lib/conex.php"; // incluimos clase de conexion
+include "../lib/Inscripciones.php";
+$db=new Conex(); //creamos la conexion (instanciamos)
+$con=$db->conectar(); // conectamos a la db
+//$sql="select * from eventos"; // creamos una consulta 
+//$rs=$con->query($sql); // ejecutamos la consulta
+$inscripciones= new Inscripciones($con);
+$rs=$inscripciones->getByEventoID($_GET['id']);
+?>
+<?php include_once '../partials/template_start.php'; ?>
+             
+<h3>   
+<?php 
+//echo "Bienvenidos ".$nombre."!!! ".$valor;
+?>    
+</h3>
+  <?php 
+  if (isset($_GET['ok']) && $_GET['ok'] == 1) {
+      echo "<p style='color:green;'>Evento insertado correctamente.</p>";
+  }
+  ?>
+  <?php 
+  if (isset($_GET['ok']) && $_GET['ok'] == 2) {
+      echo "<p style='color:green;'>Evento actualizado correctamente.</p>";
+  }
+  ?>
+    <?php 
+  if (isset($_GET['ok']) && $_GET['ok'] == 3) {
+      echo "<p style='color:green;'>Evento eliminado correctamente.</p>";
+  }
+  ?>
+  <?php 
+  if (isset($_GET['error']) && $_GET['error'] == 3) {
+      echo "<p style='color:red;'>Error al eliminar el evento.</p>";
+  }
+  ?>
+<table class="table table-striped ">
+<tr>
+    <th>Documento</th>
+    <th>Nombre</th>
+    <th>Correo</th>
+    <th>Estado</th>
+    <th>Presente</th>
+    <th><a href="../eventos/" class="btn btn-outline-secondary">Volver a Eventos</a></th>
+    <th><a href="nuevo.php?evento_id=<?php echo $_GET['id']; ?>" class="btn btn-outline-primary">Nuevo</a></th>
+</tr>
+</tr>
+
+<?php 
+while ($fila= $rs->fetch_assoc()) //loop while que se ejecuta mientras haya fila en el array asociativo
+    { ?>
+       
+<tr>
+    <td> <?php echo $fila["doc"]; ?></td>
+    <td> <?php echo $fila["apellido"].', '.$fila["nombre"]; ?></td>
+    <td> <?php echo $fila["mail"]; ?></td>
+    <td> <?php 
+    switch($fila['estado']) {
+        case 0: 
+            echo '<i class="bi bi-clock-history text-warning" title="Pendiente"></i>Pendiente'; 
+            break;
+        case 1: 
+            echo '<i class="bi bi-check-circle-fill text-success" title="Aceptado"></i>Aceptado'; 
+            break;
+        case 2: 
+            echo '<i class="bi bi-x-circle-fill text-danger" title="Rechazado"></i>Rechazado'; 
+            break;
+    }
+    ?></td>
+    <td><?php if($fila['checkin'] == 1): ?>
+        <i class="bi bi-person-check-fill text-primary" style="font-size: 1.2rem;"></i>
+    <?php else: ?>
+        <i class="bi bi-person-x text-muted" style="opacity: 0.5;"></i>
+    <?php endif; ?></td>
+    <td ><a href="editar.php?id=<?php echo $fila["id"]; ?>" class="btn btn-outline-warning">Editar</a></td>
+    <td ><a href="borrar.php?id=<?php echo $fila["id"]; ?>" class="btn btn-outline-danger">Borrar</a></td>
+
+</tr>
+
+<?php     }
+?>
+
+</table>
+
+<?php include_once '../partials/template_end.php'; ?>  
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\inscriptos\nuevo.php =====
+<?php
+include "../lib/conex.php"; // incluimos clase de conexion
+include "../lib/Usuario.php";
+//include "../lib/Inscripciones.php";
+include "../lib/Evento.php";
+$db = new Conex(); //creamos la conexion (instanciamos)
+
+$con = $db->conectar(); // conectamos a la db
+$eventos = new Evento($con);
+$usuarios = new Usuario($con);
+//$inscripciones = new Inscripciones($con);
+$ev=$eventos->getByID($_GET['evento_id'])->fetch_assoc();
+$us=$usuarios->getAll();
+$modo="nuevo";
+$target="guardar.php";
+$titulo_form="Registrar Inscripción para el evento: ".$ev['titulo'];   
+$evento_id = $_GET['evento_id'];
+
+
+$fila = [
+    "id" => "",
+    "usuario_id" => "",
+    "evento_id" => $evento_id,
+    "estado" => "0",
+    "checkin" => "0",
+    "observacion" => "",
+    "fecha_inscripcion" => "",
+    "fecha_checkin" => "",
+];
+
+include_once '../partials/template_start.php'; 
+include "_form.php";
+include_once '../partials/template_end.php';
+
+?>
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\inscriptos\_form.php =====
+ <h2><?php echo $titulo_form; ?></h2>
+<?php 
+  if (isset($_GET['error']) && $_GET['error'] == 1) {
+      echo "<p style='color:red;'>Error al insertar datos del evento.</p>";
+  }
+  //$target="guardar.php";
+  ?>
+  <?php 
+  if (isset($_GET['error']) && $_GET['error'] == 1) {
+      echo "<p style='color:red;'>Error al actualizar el evento.</p>";
+  }
+  ?>
+MODNO nuevo
+// Modo EDICION
+
+  <form action="<?php echo $target; ?>" method="post">
+    <!-- Campo oculto para id (AUTO_INCREMENT, no se carga manualmente) -->
+    <input type="hidden" name="id" value="<?php echo $fila["id"]; ?>">
+    <input type="hidden" name="evento_id" value="<?php echo $fila["evento_id"]; ?>">
+
+    <label for="inscripto">Inscripto:</label><br>
+    <?php
+    if ($modo == "nuevo") {
+        echo '<select id="usuario_id" name="usuario_id" required class="form-control">';
+        while ($us_fila = $us->fetch_assoc()) {
+            echo '<option value="' . $us_fila["id"] . '">' . $us_fila["apellido"] . ', ' . $us_fila["nombre"] . '</option>';
+        }
+        echo '</select><br><br>';
+    } else { 
+        echo "<span class='form-control'>" . $us_fila["apellido"] . ", " . $us_fila["nombre"] . "</span><br><br>";
+      ?>
+        <input type="hidden" value="<?php echo $fila["usuario_id"]; ?>" id="usuario_id" name="usuario_id" required class="form-control" readonly>
+    <?php } 
+    ?>
+    <label for="estado">Estado:</label><br>
+    <select id="estado" name="estado" required class="form-control">
+      <option value="0" <?php echo ($fila["estado"] == 0) ? "selected" : ""; ?>>Pendiente</option>
+      <option value="1" <?php echo ($fila["estado"] == 1) ? "selected" : ""; ?>>Aceptado</option>
+      <option value="2" <?php echo ($fila["estado"] == 2) ? "selected" : ""; ?>>Rechazado</option>
+    </select> <br>
+    
+      <?php
+    if ($modo == "edicion") {
+        ?>
+    <label for="checkin">Presente:</label><br>    
+    <select id="checkin" name="checkin" required class="form-control">
+      <option value="0" <?php echo ($fila["checkin"] == 0) ? "selected" : ""; ?>>No</option>
+      <option value="1" <?php echo ($fila["checkin"] == 1) ? "selected" : ""; ?>>Sí</option>
+    </select>
+    <?php
+    } else { ?>
+    <input type="hidden" value="<?php echo ($fila["checkin"]); ?>" id="checkin" name="checkin" required class="form-control">
+    <?php } ?>
+    <br>
+    <label for="observacion">Observación:</label><br>
+    <textarea id="observacion" name="observacion" class="form-control"><?php echo $fila["observacion"]; ?></textarea><br><br>
+    <?php
+    if ($modo == "edicion") {
+        ?>
+        <label for="fecha_inscripcion">Fecha de Inscripcion:</label><br>
+        <input type="hidden" value='<?php echo $fila["fecha_inscripcion"]; ?>' id="fecha_inscripcion" name="fecha_inscripcion" required class="form-control">
+        <span class="form-control" ><?php echo $fila["fecha_inscripcion"]; ?></span>
+        <br><br>
+        
+        <label for="fecha_checkin">Fecha de Asistencia:</label><br>
+        <input type="hidden" value='<?php echo $fila["fecha_checkin"]; ?>' id="fecha_checkin" name="fecha_checkin" required class="form-control"><br><br> 
+                <span class="form-control" ><?php echo $fila["fecha_checkin"]; ?></span>
+        <?php
+    }
+    ?>
+
+
+<br><br>
+
+    <a href="index.php?id=<?php echo $fila["evento_id"]; ?>" class="btn btn-outline-secondary">Volver al listado</a>
+    <input type="submit" value="Guardar" class="btn btn-outline-success">
+</form>
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\lib\app.php =====
+<?php
+define('ASSETS_URL', '/assets');
+
+//BASE_URL
+ $script_name = $_SERVER['SCRIPT_NAME'];
+ $parts = explode('/', trim($script_name, '/'));
+ $base_url = $parts[0] ?? '';
+ define('BASE_URL', '/' . $base_url);
+
+?>
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\lib\conex.php =====
+<?php
+final class Conex
+{
+    private $host="mariadb";
+    private $usuario="root";
+    private $password="root";
+    private $db="dw2_agenda";
+    public $conexion;
+
+    public function conectar() 
+    {
+        $this->conexion= new mysqli(
+            $this->host,
+            $this->usuario,
+            $this->password,
+            $this->db
+        );
+        if ($this->conexion->connect_error) {
+            die("Error de conexion");
+        }
+        return  $this->conexion;
+    }
+    
+}
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\lib\Evento.php =====
+<?php
+// importar conex 
+class Evento {
+
+    private $db;
+    public function __construct($conn)
+    {
+        $this->db=$conn;
+    }
+    public function getALL()
+        {
+        $sql="select * from eventos"; // creamos una consulta 
+        $rs=$this->db->query($sql); // ejecutamos la consulta
+        return $rs;
+        }
+    public function getByID($dato) {
+        //DELETE FROM `eventos` WHERE `eventos`.`id` = 7
+         $sql="SELECT * FROM `eventos` WHERE `eventos`.`id` = ".$dato;
+         $rs=$this->db->query($sql);
+         return $rs;
+     }
+    public function insert($datos) {
+        //INSERT INTO `eventos` (`id`, `titulo`, `fecha`, `hora`, `lugar`, `activo`) VALUES (NULL, 'Charla de FOrmularios', '2026-03-17', '20:45:44', 'Pasillo', '1');
+        $sql="INSERT INTO `eventos` (`titulo`, `fecha`, `hora`, `lugar`, `activo`) VALUES ('".$datos['titulo']."', '".$datos['fecha']."', '".$datos['hora']."', '".$datos['lugar']."', ".$datos['activo'].")";
+        $rs=$this->db->query($sql);
+    }
+        public function update($datos) {
+        //UPDATE `eventos` SET `titulo` = 'Taller de Introducción a JS', `fecha` = '2026-04-11', `hora` = '09:30:00', `lugar` = 'Aula Central UNAE ', `activo` = '0' WHERE `eventos`.`id` = 1;
+        //$sql="INSERT INTO `eventos` (`titulo`, `fecha`, `hora`, `lugar`, `activo`) VALUES ('".$datos['titulo']."', '".$datos['fecha']."', '".$datos['hora']."', '".$datos['lugar']."', ".$datos['activo'].")";
+        
+        $sql="UPDATE `eventos` SET `titulo` = '".$datos['titulo']."', `fecha` = '".$datos['fecha']."', `hora` = '".$datos['hora']."', `lugar` = '".$datos['lugar']."', `activo` = ".$datos['activo']." WHERE `eventos`.`id` = ".$datos['id'];
+
+        $rs=$this->db->query($sql);
+    }    
+     public function delete($dato) {
+        //DELETE FROM `eventos` WHERE `eventos`.`id` = 7
+         $sql="DELETE FROM `eventos` WHERE `eventos`.`id` = ".$dato;
+         $rs=$this->db->query($sql);
+     }
+}
+?>
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\lib\Inscripciones.php =====
+<?php
+// importar conex 
+class Inscripciones
+{
+
+    private $db;
+
+    public function __construct($conn)
+    {
+        $this->db = $conn;
+    }
+
+    public function getALL()
+    {
+        $sql = "select * from inscripciones"; // creamos una consulta 
+        $rs = $this->db->query($sql); // ejecutamos la consulta 
+        return $rs;
+    }
+
+    public function getByEventoID($dato)
+    {
+       $sql = "SELECT ins.*, ev.titulo, ev.fecha, ev.lugar, us.apellido, us.nombre, us.mail, us.doc FROM `inscripciones` ins JOIN eventos ev on ev.id=ins.evento_id JOIN usuarios us on us.id=ins.usuario_id WHERE `ins`.`evento_id` = " . $dato;
+        $rs = $this->db->query($sql);
+        return $rs;
+    }
+    public function getByID($dato)
+    {
+        $sql = "SELECT * FROM `inscripciones` WHERE `inscripciones`.`id` = " . $dato;
+        $rs = $this->db->query($sql);
+        return $rs;
+    }
+
+    public function insert($datos)
+    {
+        $sql = "INSERT INTO `inscripciones` (
+    `usuario_id`, 
+    `evento_id`, 
+    `estado`, 
+    `checkin`, 
+    `observacion` 
+    ) VALUES ('" . $datos['usuario_id'] . "', '" . $datos['evento_id'] . "', '" . $datos['estado'] . "', '" . $datos['checkin'] . "',
+     '" . $datos['observacion'] . "')";
+        return $this->db->query($sql);
+    }
+    public function update($datos)
+    {
+
+        //$sql = "UPDATE `usuarios` SET `apellido` = '" . $datos['apellido'] . "', `nombre` = '" . $datos['nombre'] . "', `doc` = '" . $datos['doc'] . "', `mail` = '" . $datos['mail'] . "', `contrasena` = '" . $datos['contrasena'] . "', `telefono` = '" . $datos['telefono'] . "', `direccion` = '" . $datos['direccion'] . "', `fenac` = '" . $datos['fenac'] . "', `esadmin` = " . $datos['esadmin'] . " WHERE `usuarios`.`id` = " . $datos['id'];
+        $sql = "UPDATE `inscripciones` SET 
+        `estado` = '" . $datos['estado'] . "', 
+        `checkin` = '" . $datos['checkin'] . "',
+        `fecha_checkin` = " . $datos['fecha_checkin'] . ",  
+        `observacion` = '" . $datos['observacion'] . "' 
+        
+        WHERE `inscripciones`.`id`    = " . $datos['id'];
+
+        return $rs = $this->db->query($sql);
+    }
+    public function delete($dato)
+    {
+        //DELETE FROM `usuarios` WHERE `usuarios`.`id` = 7
+        $sql = "DELETE FROM `inscripciones` WHERE `inscripciones`.`id` = " . $dato;
+        $rs = $this->db->query($sql);
+    }
+    public function checkInscripto($evento_id, $usuario_id)
+    {
+        $sql = "SELECT * FROM `inscripciones` WHERE `evento_id` = " . $evento_id . " AND `usuario_id` = " . $usuario_id;
+        $rs = $this->db->query($sql);
+        if ($rs->num_rows > 0) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+}
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\lib\Usuario.php =====
+<?php
+// importar conex 
+class Usuario {
+
+    private $db;
+    public function __construct($conn)
+    {
+        $this->db=$conn;
+    }
+    public function getALL()
+        {
+        $sql="select * from usuarios"; // creamos una consulta 
+        $rs=$this->db->query($sql); // ejecutamos la consulta
+        return $rs;
+        }
+    public function getByID($dato) {
+        //DELETE FROM `usuarios` WHERE `usuarios`.`id` = 7
+         $sql="SELECT * FROM `usuarios` WHERE `usuarios`.`id` = ".$dato;
+         $rs=$this->db->query($sql);
+         return $rs;
+     }
+    public function insert($datos) {
+          $sql="INSERT INTO `usuarios` 
+(`id`, `apellido`, `nombre`, `fenac`, `doc`, `mail`, `telefono`, `direccion`, `contrasena`, `esadmin`)
+ VALUES (NULL, '".$datos['apellido']."', '".$datos['nombre']."', '".$datos['fenac']."', '".$datos['doc']."', '".$datos['mail']."', '".$datos['telefono']."', '".$datos['direccion']."', '".$datos['contrasena']."', ".$datos['esadmin'].")";
+        
+        $rs=$this->db->query($sql);
+    }
+        public function update($datos) {
+/*         UPDATE `usuarios` 
+SET `apellido` = 'Rios', `nombre` = 'Luis', `doc` = '12345678', `mail` = 'luis@mail.com', 
+contrasena=" ", telefono="", direccion="", fenac="2026/01/01"
+`telefono` = '232124', `esadmin` = '1' WHERE `usuarios`.`id` = 2; */
+        $sql="UPDATE `usuarios` SET `apellido` = '".$datos['apellido']."', `nombre` = '".$datos['nombre']."', `doc` = '".$datos['doc']."', `mail` = '".$datos['mail']."', `contrasena` = '".$datos['contrasena']."', `telefono` = '".$datos['telefono']."', `direccion` = '".$datos['direccion']."', `fenac` = '".$datos['fenac']."', `esadmin` = ".$datos['esadmin']." WHERE `usuarios`.`id` = ".$datos['id'];
+
+      $rs=$this->db->query($sql);
+    }    
+     public function delete($dato) {
+        //DELETE FROM `usuarios` WHERE `usuarios`.`id` = 7
+         $sql="DELETE FROM `usuarios` WHERE `usuarios`.`id` = ".$dato;
+         $rs=$this->db->query($sql);
+     }
+}
+?>
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\partials\aside1.php =====
+            <aside class="col-2  p-3">
+                <div class="mb-3">Menú</div>
+                <div class="list-group">
+                    <a href="<?= BASE_URL ?>/index.php" class="list-group-item list-group-item-action"><i class="bi bi-house-door"></i> Inicio</a>
+                    <a href="<?= BASE_URL ?>/eventos/index.php" class="list-group-item list-group-item-action"><i class="bi bi-calendar-event"></i> Eventos</a>
+                    <a href="<?= BASE_URL ?>/usuarios/index.php" class="list-group-item list-group-item-action"><i class="bi bi-people"></i> Usuarios</a>
+                    <a href="#" class="list-group-item list-group-item-action"><i class="bi bi-gear"></i> Configuración</a>
+                </div>
+            </aside>
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\partials\aside2.php =====
+            <aside class="col-2  p-3">
+                <div class="mb-3">Acciones</div>
+                <div class="list-group">
+                    <a href="#" class="list-group-item list-group-item-action"><i class="bi bi-bell"></i> Notificacion</a>
+                    <a href="#" class="list-group-item list-group-item-action"><i class="bi bi-envelope"></i> Mensajes</a>
+                    <a href="#" class="list-group-item list-group-item-action"><i class="bi bi-arrow-right"></i> Salir</a>
+                </div>
+            </aside>
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\partials\footer.php =====
+    <footer>
+        <div class="container-fluid bg-dark text-light p-3 mt-4">
+            <div class="row">
+                <div class="col text-center">
+                    <p class="mb-0">&copy; 2026 Mi Aplicación. Todos los derechos reservados.</p>
+                </div>
+            </div>
+        </div>
+
+    </footer>
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\partials\head.php =====
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="<?= ASSETS_URL ?>/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="<?= ASSETS_URL ?>/bootstrap-icons/bootstrap-icons.min.css">
+</head>
+<body>
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\partials\header.php =====
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Navbar</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="<?= BASE_URL ?>/index.php">Inicio</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="<?= BASE_URL ?>/acercade.php">Acerca de</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="<?= BASE_URL ?>/contactos.php">Contacto</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\partials\template_end.php =====
+</main>
+              <!-- termina col main -->
+
+             <!-- inicia col derecha -->
+              <?php
+include __DIR__.'/aside2.php';
+?>
+
+        </div
+
+    </div>
+    <!-- comienza el footer -->
+<?php
+include __DIR__.'/footer.php';
+?>
+       <!-- comienza el footer -->
+    <script src="<?= ASSETS_URL ?>/bootstrap/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\partials\template_start.php =====
+<?php
+include_once __DIR__.'/../lib/app.php';
+include __DIR__.'/head.php';
+?>
+    <!-- cominenza la cacera -->
+<?php
+include __DIR__.'/header.php';
+?>
+        <!-- termina la cacera -->
+    <div class="container-fluid">
+        <div class="row">
+            <!-- inicia col izquierda -->
+<?php
+include __DIR__.'/aside1.php';
+?>
+            <!-- termina col izquierda -->
+
+              <!-- inicia col main -->
+            <main class="col-8 p-md-3">
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\practica\eventos.js =====
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\usuarios\actualizar.php =====
+<?php
+include "../lib/conex.php"; // incluimos clase de conexion
+include "../lib/Usuario.php";
+$db = new Conex(); //creamos la conexion (instanciamos)
+$con = $db->conectar(); // conectamos a la db
+//$sql="select * from eventos"; // creamos una consulta 
+//$rs=$con->query($sql); // ejecutamos la consulta
+$datos = new Usuario($con);
+
+// $_REQUEST $_GET $_POST
+if(isset($_POST)) {
+    //print_r($_POST);
+   // Validaciones
+    if (empty($_POST['nombre']) || strlen($_POST['nombre']) > 100) {
+        $errores[] = "El nombre es obligatorio y no debe superar 100 caracteres.";
+    }
+        if (empty($_POST['apellido']) || strlen($_POST['apellido']) > 100) {
+        $errores[] = "El apellido es obligatorio y no debe superar 100 caracteres.";
+    }
+        if (empty($_POST['doc']) || strlen($_POST['doc']) > 191) {
+        $errores[] = "El número de documento es obligatorio y no debe superar 191 caracteres.";
+    }
+        if (empty($_POST['mail']) || strlen($_POST['mail']) > 191) {
+        $errores[] = "El correo electrónico es obligatorio y no debe superar 191 caracteres.";
+    }
+    if (empty($_POST['fenac'])) {
+        $errores[] = "La fecha es obligatoria.";
+    } 
+     if (empty($_POST['id'])) {
+        $errores[] = "La id es obligatoria.";
+    } 
+    if (!empty($_POST['direccion']) && strlen($_POST['direccion']) > 191) {
+        $errores[] = "El lugar no debe superar 191 caracteres.";
+    }
+
+
+    if (!in_array($_POST['esadmin'], [0,1])) {
+        $errores[] = "El campo administrador debe ser 0 o 1.";
+    }
+    // Si hay errores, mostrarlos
+    if (empty($errores)) {
+        /* foreach ($errores as $error) {
+            echo "<p style='color:red;'>$error</p>";
+        } */
+        $rs = $datos->update($_POST);
+        header("Location: index.php?ok=2");
+    } else {
+        header("Location: editar.php?id=" . $_POST['id'] . "&error=2");
+    }
+
+
+    exit();
+} else {
+    echo "No llegaron valores por POST";
+}
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\usuarios\api.php =====
+<?php
+header('Content-Type: application/json');
+include "../lib/conex.php"; // incluimos clase de conexion
+include "../lib/Usuario.php";
+$db=new Conex(); //creamos la conexion (instanciamos)
+$con=$db->conectar(); // conectamos a la db
+//$sql="select * from eventos"; // creamos una consulta 
+//$rs=$con->query($sql); // ejecutamos la consulta
+$usuario= new Usuario($con);
+// getById id= $_GET['id']
+if (isset($_GET['id']) && !empty($_GET['id'])) {
+    $id = $_GET['id'];
+    $rs = $usuario->getById($id);
+} else { // getAll
+    $rs = $usuario->getALL();
+}
+$datos=[];
+while ($fila= $rs->fetch_assoc()) //loop while que se ejecuta mientras haya
+{
+    $datos[]=$fila;
+}
+$respuesta=[
+    "status"=>"success",
+    "data"=>$datos,
+    "total"=>count($datos)
+];
+
+echo json_encode($respuesta);
+?>
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\usuarios\borrar.php =====
+<?php
+include "../lib/conex.php"; // incluimos clase de conexion
+include "../lib/Usuario.php";
+$db = new Conex(); //creamos la conexion (instanciamos)
+$con = $db->conectar(); // conectamos a la db
+//$sql="select * from eventos"; // creamos una consulta 
+//$rs=$con->query($sql); // ejecutamos la consulta
+$datos = new Usuario($con);
+if (isset($_GET['id'])) {
+     if($rs = $datos->delete($_GET['id'])) 
+        { ;
+        header("Location: index.php?ok=3");
+        exit(); 
+        } else {
+            header("Location: index.php?error=3");
+            exit();
+        }
+} else {
+    echo "No se recibió un ID válido para eliminar.";
+    header("Location: index.php?error=3");
+    exit();
+}
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\usuarios\editar.php =====
+<?php
+include "../lib/conex.php"; // incluimos clase de conexion
+include "../lib/Usuario.php";
+$db=new Conex(); //creamos la conexion (instanciamos)
+$con=$db->conectar(); // conectamos a la db
+//$sql="select * from eventos"; // creamos una consulta 
+//$rs=$con->query($sql); // ejecutamos la consulta
+$dato= new Usuario($con);
+if (isset($_GET['id']))
+     {
+    $rs=$dato->getByID($_GET['id']);
+    $fila= $rs->fetch_assoc();
+     }   
+$target="actualizar.php";
+$titulo_form="Editar Usuario";   
+?>
+<?php include_once '../partials/template_start.php';
+
+include "_form.php";
+include_once '../partials/template_end.php';
+ ?>
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\usuarios\guardar.php =====
+<?php
+include "../lib/conex.php"; // incluimos clase de conexion
+include "../lib/Usuario.php";
+$db=new Conex(); //creamos la conexion (instanciamos)
+$con=$db->conectar(); // conectamos a la db
+//$sql="select * from eventos"; // creamos una consulta 
+//$rs=$con->query($sql); // ejecutamos la consulta
+$datos= new Usuario($con);
+$errores = [];
+// $_REQUEST $_GET $_POST
+ if(isset($_POST)) {
+    //print_r($_POST);
+   // Validaciones
+    if (empty($_POST['nombre']) || strlen($_POST['nombre']) > 100) {
+        $errores[] = "El nombre es obligatorio y no debe superar 100 caracteres.";
+    }
+        if (empty($_POST['apellido']) || strlen($_POST['apellido']) > 100) {
+        $errores[] = "El apellido es obligatorio y no debe superar 100 caracteres.";
+    }
+        if (empty($_POST['doc']) || strlen($_POST['doc']) > 191) {
+        $errores[] = "El número de documento es obligatorio y no debe superar 191 caracteres.";
+    }
+        if (empty($_POST['mail']) || strlen($_POST['mail']) > 191) {
+        $errores[] = "El correo electrónico es obligatorio y no debe superar 191 caracteres.";
+    }
+    if (empty($_POST['fenac'])) {
+        $errores[] = "La fecha es obligatoria.";
+    } 
+
+
+
+    if (!empty($_POST['direccion']) && strlen($_POST['direccion']) > 191) {
+        $errores[] = "El lugar no debe superar 191 caracteres.";
+    }
+
+
+    if (!in_array($_POST['esadmin'], [0,1])) {
+        $errores[] = "El campo administrador debe ser 0 o 1.";
+    }
+    // Si hay errores, mostrarlos
+    if (empty($errores)) {
+
+            $rs=$datos->insert($_POST);
+        header("Location: index.php?ok=1");
+    } else {
+        //header("Location: nuevo.php?error=1");
+        print_r($errores);
+    }
+    }
+
+
+?>
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\usuarios\index.php =====
+<?php
+include "../lib/conex.php"; // incluimos clase de conexion
+include "../lib/Usuario.php";
+$db=new Conex(); //creamos la conexion (instanciamos)
+$con=$db->conectar(); // conectamos a la db
+//$sql="select * from eventos"; // creamos una consulta 
+//$rs=$con->query($sql); // ejecutamos la consulta
+$usuario= new Usuario($con);
+$rs=$usuario->getALL();
+?>
+<?php include_once '../partials/template_start.php'; ?>
+             
+<h3>   
+<?php 
+//echo "Bienvenidos ".$nombre."!!! ".$valor;
+?>    
+</h3>
+  <?php 
+  if (isset($_GET['ok']) && $_GET['ok'] == 1) {
+      echo "<p style='color:green;'>Evento insertado correctamente.</p>";
+  }
+  ?>
+  <?php 
+  if (isset($_GET['ok']) && $_GET['ok'] == 2) {
+      echo "<p style='color:green;'>Evento actualizado correctamente.</p>";
+  }
+  ?>
+    <?php 
+  if (isset($_GET['ok']) && $_GET['ok'] == 3) {
+      echo "<p style='color:green;'>Evento eliminado correctamente.</p>";
+  }
+  ?>
+  <?php 
+  if (isset($_GET['error']) && $_GET['error'] == 3) {
+      echo "<p style='color:red;'>Error al eliminar el evento.</p>";
+  }
+  ?>
+<table class="table table-striped ">
+<tr>
+    <th>Doc</th>
+    <th>Apellido</th>
+    <th>Fecha</th>
+    <th>Telefono</th>
+    
+    <th>Mail</th>
+    <th>Admin</th>
+    <th colspan="2"><a href="nuevo.php" class="btn btn-outline-primary">Nuevo</a></th>
+    <th colspan="1"><a href="api.php" class="btn btn-outline-info" target="_blank">JSON</a></th>
+    
+</tr>
+</tr>
+
+<?php 
+while ($fila= $rs->fetch_assoc()) //loop while que se ejecuta mientras haya fila en el array asociativo
+    { ?>
+       
+<tr>
+    <td> <?php echo $fila["doc"]; ?></td>
+    <td> <?php echo $fila["apellido"].', '.$fila["nombre"]; ?></td>
+    <td> <?php echo $fila["fenac"]; ?></td>
+    <td> <?php echo $fila["telefono"]; ?></td>
+    <td> <?php echo $fila["mail"]; ?></td>
+    <td> <?php if($fila["esadmin"]) { echo "Si"; } else { echo "NO";} ?></td>
+    <td ><a href="editar.php?id=<?php echo $fila["id"]; ?>" class="btn btn-outline-warning">Editar</a></td>
+    <td ><a href="borrar.php?id=<?php echo $fila["id"]; ?>" class="btn btn-outline-danger">Borrar</a></td>
+    <td><a href="api.php?id=<?php echo $fila["id"]; ?>" class="btn btn-outline-info" target="_blank">JSON</a></td>
+
+</tr>
+
+<?php     }
+?>
+
+</table>
+
+<?php include_once '../partials/template_end.php'; ?>  
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\usuarios\nuevo.php =====
+<?php
+$target="guardar.php";
+$titulo_form="Registrar Evento";   
+
+$fila = [
+    "id" => "",
+    "nombre" => "",
+    "apellido" => "",
+    "mail" => "",
+    "telefono" => "",
+        "doc" => "",
+    "fenac" => "",
+        "direccion" => "",
+        "contrasena" => "",
+    "esadmin" => 0
+];
+
+include_once '../partials/template_start.php'; 
+include "_form.php";
+include_once '../partials/template_end.php';
+
+?>
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\usuarios\_form.php =====
+ <h2><?php echo $titulo_form; ?></h2>
+<?php 
+  if (isset($_GET['error']) && $_GET['error'] == 1) {
+      echo "<p style='color:red;'>Error al insertar datos del evento.</p>";
+  }
+  //$target="guardar.php";
+  ?>
+  <?php 
+  if (isset($_GET['error']) && $_GET['error'] == 1) {
+      echo "<p style='color:red;'>Error al actualizar el evento.</p>";
+  }
+  ?>
+
+  <form action="<?php echo $target; ?>" method="post">
+    <!-- Campo oculto para id (AUTO_INCREMENT, no se carga manualmente) -->
+    <input type="hidden" name="id" value="<?php echo $fila["id"]; ?>">
+
+    <label for="apellido">Apellido:</label><br>
+    <input type="text" value='<?php echo $fila["apellido"]; ?>' id="apellido" name="apellido" maxlength="100" required class="form-control"><br><br>
+
+    <label for="nombre">Nombre:</label><br>
+    <input type="text" value='<?php echo $fila["nombre"]; ?>' id="nombre" name="nombre" maxlength="100" required class="form-control"><br><br>
+
+    <label for="fenac">Fecha de nacimiento:</label><br>
+    <input type="date" value='<?php echo $fila["fenac"]; ?>' id="fenac" name="fenac" required class="form-control"><br><br>
+
+    <label for="doc">Documento:</label><br>
+    <input type="text" value='<?php echo $fila["doc"]; ?>' id="doc" name="doc" maxlength="191" required class="form-control"><br><br>
+
+    <label for="mail">Correo electrónico:</label><br>
+    <input type="email" value='<?php echo $fila["mail"]; ?>' id="mail" name="mail" maxlength="191" required class="form-control"><br><br>
+
+    <label for="telefono">Teléfono:</label><br>
+    <input type="text" value='<?php echo $fila["telefono"]; ?>' id="telefono" name="telefono" maxlength="191" class="form-control"><br><br>
+
+    <label for="direccion">Dirección:</label><br>
+    <textarea id="direccion" name="direccion" class="form-control" required><?php echo $fila["direccion"]; ?></textarea><br><br>
+
+    <label for="contrasena">Contraseña:</label><br>
+    <input type="password" value='<?php echo $fila["contrasena"]; ?>' id="contrasena" name="contrasena" maxlength="191" required class="form-control"><br><br>
+
+    <label for="esadmin">Es administrador:</label><br>
+    <select id="esadmin" name="esadmin" required class="form-control">
+      <option value="1" <?php echo ($fila["esadmin"] == 1) ? "selected" : ""; ?>>Sí</option>
+      <option value="0" <?php echo ($fila["esadmin"] == 0) ? "selected" : ""; ?>>No</option>
+    </select><br><br>
+
+    <a href="index.php" class="btn btn-outline-secondary">Volver al listado</a>
+    <input type="submit" value="Guardar" class="btn btn-outline-success">
+</form>
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\acercade.php =====
+<?php include_once 'partials/template_start.php'; ?>
+                <h1>Nosotros</h1>    
+                <p>somos una empresa dedicada a proporcionar soluciones innovadoras</p>    
+<?php include_once 'partials/template_end.php'; ?>    
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\contactos.php =====
+<?php include_once 'partials/template_start.php'; ?>
+                    <h1>Contacto</h1>    
+                    <form action="" method="post">
+                        <div class="mb-3">
+                            <label for="nombre" class="form-label">Nombre</label>
+                            <input type="text" class="form-control" id="nombre" name="nombre" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Correo Electrónico</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="mensaje" class="form-label">Mensaje</label>
+                            <textarea class="form-control" id="mensaje" name="mensaje" rows="4" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Enviar</button>
+                    </form>
+<?php include_once 'partials/template_end.php'; ?>   
+
+
+
+===== ARCHIVO: C:\Apps\sz33Dw2\0604\index.php =====
+<?php include_once 'partials/template_start.php'; ?>
+                <h1>Bienvenidos a la aplicación</h1>    
+                <p>esta es la seccion principal de la aplicación</p>    
+<?php include_once 'partials/template_end.php'; ?>            
+
+
+

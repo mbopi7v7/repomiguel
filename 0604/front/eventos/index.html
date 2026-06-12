@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Eventos - Frontend dinámico</title>
+
+  <link rel="stylesheet" href="../../../assets/bootstrap/css/bootstrap.min.css">
+</head>
+<body>
+
+<div class="container mt-4">
+
+  <h1>Gestión local de eventos</h1>
+
+  <p> 
+    Esta pantalla permite descargar eventos desde el backend PHP,
+    guardarlos en LocalStorage, editarlos localmente y actualizar
+    la interfaz sin recargar la página.
+  </p>
+
+  <div id="mensaje" class="mb-3"></div>
+
+  <!-- VISTA LISTADO -->
+  <section id="vistaListado">
+
+    <div class="mb-3">
+      <button id="btnDescargar" class="btn btn-primary">
+        ☁️ Descargar eventos
+      </button>
+
+      <button id="btnPintar" class="btn btn-outline-secondary">
+        🎨 Pintar desde LocalStorage
+      </button>
+
+      <button id="btnLimpiarStorage" class="btn btn-outline-danger">
+        🗑️ Limpiar LocalStorage
+      </button>
+    </div>
+
+    <h3>Listado de eventos</h3>
+
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Título</th>
+          <th>Lugar</th>
+          <th>Fecha</th>
+          <th>Hora</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+
+      <tbody id="tbodyEventos">
+      </tbody>
+    </table>
+
+  </section>
+
+  <!-- VISTA FORMULARIO -->
+  <section id="vistaFormulario" style="display: block;">
+
+    <h3>Editar evento</h3>
+
+    <p>
+      Modifique los datos del evento seleccionado. Los cambios se guardarán
+      únicamente en LocalStorage.
+    </p>
+
+    <form id="formEvento">
+
+      <input type="hidden" id="id">
+
+      <div class="mb-3">
+        <label for="titulo" class="form-label">Título</label>
+        <input type="text" id="titulo" class="form-control" required>
+      </div>
+
+      <div class="mb-3">
+        <label for="lugar" class="form-label">Lugar</label>
+        <input type="text" id="lugar" class="form-control">
+      </div>
+
+      <div class="mb-3">
+        <label for="fecha" class="form-label">Fecha</label>
+        <input type="date" id="fecha" class="form-control" required>
+      </div>
+
+      <div class="mb-3">
+        <label for="hora" class="form-label">Hora</label>
+        <input type="time" id="hora" class="form-control">
+      </div>
+
+      <div class="mb-3">
+        <label for="activo" class="form-label">Activo</label>
+        <select id="activo" class="form-control">
+          <option value="1">Sí</option>
+          <option value="0">No</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-success">
+        💾 Guardar cambios locales
+      </button>
+
+      <button type="button" id="btnCancelar" class="btn btn-outline-secondary">
+        Cancelar
+      </button>
+
+    </form>
+
+  </section>
+
+</div>
+
+<script src="api.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
